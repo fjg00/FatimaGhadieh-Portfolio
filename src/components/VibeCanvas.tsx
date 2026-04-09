@@ -2,50 +2,46 @@ import { useEffect, useRef } from 'react';
 
 interface VibeCanvasProps {
   isPlayMode: boolean;
+  mathTarget: {x: number, y: number} | null;
+  resetMathTarget: () => void;
 }
 
-const VibeCanvas = ({ isPlayMode }: VibeCanvasProps) => {
+const VibeCanvas = ({ isPlayMode, mathTarget, resetMathTarget }: VibeCanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    let dots: {baseX: number, baseY: number, x: number, y: number, vx: number, vy: number}[] = [];
-    const spacing = 30; // Distance between dots
+    const numParticles = 250;
+    let particles: {x: number, y: number, vx: number, vy: number}[] = [];
+    let mouse = { x: -1000, y: -1000 };
     
-    // Spring physics constants
-    const k = 0.05; // Spring constant (return to origin)
-    const damping = 0.8; // Dampens the oscillation
-    
-    let mouse = { x: -1000, y: -1000, vx: 0, vy: 0 };
-    let lastMouse = { x: -1000, y: -1000 };
+    // Math Filter State
+    let filtering = false;
+    let filterTimer = 0;
+    let filterTarget = { x: 0, y: 0 };
 
     const resize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
       
-      dots = [];
-      for (let x = 0; x < canvas.width; x += spacing) {
-        for (let y = 0; y < canvas.height; y += spacing) {
-          dots.push({
-            baseX: x, baseY: y,
-            x: x, y: y,
-            vx: 0, vy: 0
-          });
-        }
+      particles = [];
+      for (let i = 0; i < numParticles; i++) {
+        particles.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          vx: (Math.random() - 0.5) * 0.5,
+          vy: (Math.random() - 0.5) * 0.5
+        });
       }
     };
 
     const handleMouseMove = (e: MouseEvent) => {
-      lastMouse = { ...mouse };
       mouse.x = e.clientX;
       mouse.y = e.clientY;
-      mouse.vx = mouse.x - lastMouse.x;
-      mouse.vy = mouse.y - lastMouse.y;
     };
 
     window.addEventListener('resize', resize);
@@ -58,43 +54,84 @@ const VibeCanvas = ({ isPlayMode }: VibeCanvasProps) => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       if (isPlayMode) {
-        // Render interacting dots
-        ctx.fillStyle = 'rgba(124, 131, 188, 0.5)'; // Soft Indigo dots
-        for (let i = 0; i < dots.length; i++) {
-          const dot = dots[i];
+        
+        if (mathTarget) {
+           filtering = true;
+           filterTimer = 60; // frames
+           filterTarget = { ...mathTarget };
+           resetMathTarget();
+        }
+
+        ctx.fillStyle = 'rgba(124, 131, 188, 0.4)'; // Indigo particles
+
+        for (let i = 0; i < particles.length; i++) {
+          const p = particles[i];
           
-          // Repulsion disturbance
-          const dx = mouse.x - dot.x;
-          const dy = mouse.y - dot.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          
-          if (dist < 100) {
-             const force = (100 - dist) / 100;
-             dot.vx -= (dx / dist) * force * 2;
-             dot.vy -= (dy / dist) * force * 2;
+          if (filtering) {
+            // Apply Gaussian distribution polarization target
+            // Normal distribution: y = a * e^(-(x-b)^2 / 2c^2)
+            const c = 300; // spread
+            const a = 200; // peak height
+            
+            // X stays roughly same but drift towards center slightly
+            const targetX = p.x;
+            const distFromCenter = targetX - filterTarget.x;
+            
+            // Calculate height off the click Y axis
+            const gaussianOffset = a * Math.exp(-(distFromCenter * distFromCenter) / (2 * c * c));
+            const targetY = filterTarget.y - gaussianOffset;
+            
+            // Move particle drastically to target
+            p.vx += (targetX - p.x) * 0.05;
+            p.vy += (targetY - p.y) * 0.05;
+            
+          } else {
+            // Ambient Noise (Brownian)
+            p.vx += (Math.random() - 0.5) * 0.1;
+            p.vy += (Math.random() - 0.5) * 0.1;
+            
+            // Gravity Well (Cursor attraction logic)
+            const dx = mouse.x - p.x;
+            const dy = mouse.y - p.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            
+            if (dist < 200) {
+              const force = (200 - dist) / 200;
+              p.vx += (dx / dist) * force * 0.8;
+              p.vy += (dy / dist) * force * 0.8;
+            }
           }
 
-          // Return to grid
-          const restX = dot.x - dot.baseX;
-          const restY = dot.y - dot.baseY;
+          // Damping and limits
+          const damping = 0.95;
+          p.vx *= damping;
+          p.vy *= damping;
           
-          dot.vx += -k * restX;
-          dot.vy += -k * restY;
+          // Speed limit
+          const speed = Math.sqrt(p.vx*p.vx + p.vy*p.vy);
+          if (speed > 8) {
+             p.vx = (p.vx / speed) * 8;
+             p.vy = (p.vy / speed) * 8;
+          }
+
+          p.x += p.vx;
+          p.y += p.vy;
           
-          dot.vx *= damping;
-          dot.vy *= damping;
-          
-          dot.x += dot.vx;
-          dot.y += dot.vy;
+          // Wrap screen
+          if (p.x < 0) p.x = canvas.width;
+          if (p.x > canvas.width) p.x = 0;
+          if (p.y < 0) p.y = canvas.height;
+          if (p.y > canvas.height) p.y = 0;
           
           ctx.beginPath();
-          ctx.arc(dot.x, dot.y, 1.5, 0, Math.PI * 2);
+          ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
           ctx.fill();
         }
-      } else {
-        // If in work mode, either don't draw or draw rigid faint dots
-        // Actually the prompt says "the dot-grid disappears".
-        // We'll clear the canvas implicitly by resting.
+
+        if (filtering) {
+          filterTimer--;
+          if (filterTimer <= 0) filtering = false;
+        }
       }
 
       animationId = requestAnimationFrame(animate);
@@ -107,7 +144,7 @@ const VibeCanvas = ({ isPlayMode }: VibeCanvasProps) => {
       window.removeEventListener('mousemove', handleMouseMove);
       cancelAnimationFrame(animationId);
     };
-  }, [isPlayMode]); // Re-run effect or rely on state inside frame
+  }, [isPlayMode, mathTarget, resetMathTarget]);
 
   return (
     <canvas 
