@@ -1,0 +1,110 @@
+@import url('https://fonts.googleapis.com/css2?family=Varela+Round&family=Caveat:wght@400;600&family=Fira+Code&display=swap');
+
+:root {
+  /* Tactile Dynamics Palette */
+  --bg-color: #FCFBF9; /* Milky warm sandbox */
+  --card-bg: #FFFFFF;
+  
+  --text-primary: #2C2C2C;
+  --text-secondary: #5A5A5A;
+  
+  --accent-clay: #D98A78; /* Faded Clay Red */
+  --accent-indigo: #7C83BC; /* Soft Indigo */
+  
+  --font-friendly: 'Varela Round', system-ui, sans-serif;
+  --font-genius: 'Caveat', cursive;
+  --font-math: 'Fira Code', monospace; /* Proxy for LaTeX crispness in code */
+  
+  --transition-mode: background-color 0.4s ease, color 0.4s ease, box-shadow 0.4s ease;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-family: var(--font-friendly);
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Typography Base */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-friendly);
+  color: var(--text-primary);
+  font-weight: 400; /* Varela is naturally soft and chunky */
+  line-height: 1.2;
+}
+
+h1 { font-size: 3rem; margin-bottom: 1.5rem; }
+h2 { font-size: 2rem; margin-bottom: 1rem; }
+h3 { font-size: 1.25rem; }
+
+p {
+  color: var(--text-secondary);
+  font-size: 1.05rem;
+  margin-bottom: 1.25rem;
+  max-width: 65ch;
+  transition: var(--transition-mode);
+}
+
+a {
+  color: var(--text-primary);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: var(--accent-indigo);
+}
+
+::selection {
+  background: var(--accent-clay);
+  color: white;
+}
+
+/* Annotations & Math */
+.annotation {
+  font-family: var(--font-genius);
+  font-size: 1.6rem;
+  color: var(--accent-clay);
+  transform: rotate(-3deg);
+  display: inline-block;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+/* Hide annotations dynamically when mode shifts via CSS parent class or inline */
+.work-mode .annotation {
+  opacity: 0 !important;
+  pointer-events: none;
+}
+
+.math-text {
+  font-family: var(--font-math);
+  background: #f4f4f4;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.9em;
+  color: var(--accent-indigo);
+}
+
+/* Base Utilities */
+.section-padding {
+  padding: 5rem 2rem;
+}
+
+.max-w-4xl {
+  max-width: 900px;
+  margin: 0 auto;
+}
