@@ -37,6 +37,7 @@ const Layout = () => {
     { path: '/', label: 'About' },
     { path: '/research', label: 'Research' },
     { path: '/teaching', label: 'Teaching' },
+    { path: '/experience', label: 'Experience' },
     { path: '/projects', label: 'Projects' },
     { path: '/updates', label: 'Updates' },
     { path: '/gallery', label: 'Archive' }
